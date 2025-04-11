@@ -9,6 +9,7 @@
 #include <BLE.h>
 
 
+
 /*Create a BLE scanner*/
 BLEScan* pBLEScan;
 
@@ -17,17 +18,19 @@ BLEScan* pBLEScan;
 /* Callback class to handle BLE devices found during scanning
  * It processes the RSSI, service UUID, and local name of each advertised device.
  */
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
+/*class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) override {
-        // Get RSSI value
-        sint8 rssi = BLE_sint8GetRSSI(advertisedDevice);                  
-        // Print the RSSI value to the serial
-        Serial.print("RSSI: ");
-        Serial.print(rssi);
-        Serial.println(" dBm");
              
-        // Check if the UUID matches
+        // Check if the UUID matches          
         if (BLE_boolCheckForServiceUUID(advertisedDevice)) {
+            // Get RSSI value
+            sint8 rssi = BLE_sint8GetRSSI(advertisedDevice); 
+            // Print the RSSI value to the serial
+            Serial.print("RSSI: ");
+            Serial.print(rssi);
+            Serial.println(" dBm");
+            //Send RSSI by CAN
+            // ESP32_voidSendRSSI(rssi);
             // Call the BLE_getUserID function to get the User ID
             const uint8* userID = BLE_pconstuint8GetUserID(advertisedDevice);
             // Print the User ID to the Serial monitor
@@ -37,6 +40,51 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
  
     }
 };
+*/
+class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
+private:
+    sint8 rssiArray[8];   // Array to hold 8 RSSI values
+    uint8_t rssiIndex = 0; // Index to track how many values collected
+
+public:
+    void onResult(BLEAdvertisedDevice advertisedDevice) override {
+        // Check if the UUID matches          
+        if (BLE_boolCheckForServiceUUID(advertisedDevice)) {
+            // Get RSSI value
+            sint8 rssi = BLE_sint8GetRSSI(advertisedDevice); 
+            // Store RSSI in the array
+            rssiArray[rssiIndex++] = rssi;
+
+            // Print the RSSI value to the serial
+            Serial.print("RSSI [");
+            Serial.print(rssiIndex);
+            Serial.print("]: ");
+            Serial.print(rssi);
+            Serial.println(" dBm");
+
+            // Call the BLE_getUserID function to get the User ID
+            const uint8* userID = BLE_pconstuint8GetUserID(advertisedDevice);
+            Serial.print("User ID: ");
+            Serial.println((char*)userID);  // Print it as a string
+/*********************************CAN PART*****************************************/
+            // Once 8 values are collected, send via CAN
+            if (rssiIndex >= 8) {
+              Serial.println("Sending RSSI array via CAN:");
+              for (int i = 0; i < 8; i++) {
+                  Serial.print("RSSI[");
+                  Serial.print(i);
+                  Serial.print("]: ");
+                  Serial.print(rssiArray[i]);
+                  Serial.println(" dBm");
+              }
+              ESP32_voidSendRSSIArray(rssiArray);  // Send 8 RSSI values
+              rssiIndex = 0;  // Reset for the next batch
+            }
+/************************************************************************************/            
+        }        
+    }
+};
+
 
 
   
@@ -94,7 +142,7 @@ bool BLE_boolCheckForServiceUUID(BLEAdvertisedDevice advertisedDevice){
         }
     } 
     else {
-            Serial.println("No UUID");
+           // Serial.println("No UUID");
     }
     return false;
 }
@@ -175,5 +223,51 @@ void ESP32_voidCheckMemory() {
     if (ESP.getFreeHeap() < 10000) { // If free memory is below 10 KB
         Serial.println("Low memory, restarting...");
         ESP.restart(); // Restart ESP32 to clear memory  
+    }
+}
+
+
+void ESP32_voidSendRSSI(sint8 copy_RSSI) {
+    uint8_t rssi_size = 1;  // Size is 1 byte (for a single RSSI value)
+    
+    // Send the signed RSSI value directly
+    canSender(0x30, rssi_size, (uint8*)&copy_RSSI);  // Send the signed RSSI value as is
+}
+
+void ESP32_voidSendRSSIArray(sint8 copy_RSSI_Array[8]) {
+    uint8_t rssi_size = 8;  // Total 8 bytes for 8 RSSI values
+
+    // Send the array of 8 signed RSSI values
+    canSender(0x30, rssi_size, (uint8_t*)copy_RSSI_Array);
+}
+
+
+/*void ESP32_voidSendRSSI(sint8 copy_RSSI) {
+    uint8_t rssi_size = 1;  // Size is 1 byte (for a single RSSI value)
+    
+    // Try to send the message and handle timeout
+    unsigned long start_time = millis();
+    
+    // Attempt to send the CAN message and handle timeout
+    while (millis() - start_time < TIMEOUT_MS) {
+        // Send the RSSI value
+        canSender(0x30, rssi_size, (uint8_t*)&copy_RSSI);
+        
+        break;  // Exit the loop after sending the message
+    }
+
+    // If the timeout is reached without sending, handle the error (optional)
+    if (millis() - start_time >= TIMEOUT_MS) {
+        Serial.println("CAN communication timed out.");
+    }
+}*/
+
+
+void ESP32_voidSendUserID(uint8* copy_userID){
+        uint16 ID = 0x20;  // Start CAN IDs from 0x20
+
+    for (uint8 i = 0; i < 27; i += 8) {
+        uint8 size = (i + 8 <= 27) ? 8 : (27 - i);  // Handle the last chunk if it's less than 8 bytes
+        canSender(ID++, size, &copy_userID[i]);  // Send the 8-byte (or less) chunk
     }
 }

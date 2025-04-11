@@ -14,6 +14,7 @@
 #include <BLEDevice.h>
 #include <BLE_config.h>
 #include <BLEScan.h>
+#include "BLE_CAN.h"
 /* Section : Data Type Declarations */
 
 
@@ -31,7 +32,9 @@ bool BLE_boolCheckForServiceUUID(BLEAdvertisedDevice advertisedDevice);
 const uint8* BLE_pconstuint8GetUserID(BLEAdvertisedDevice advertisedDevice);
 void BLE_voidRestartScan() ;
 void ESP32_voidCheckMemory();
+/**CAN Communication**/
 void ESP32_voidSendRSSI(sint8 copy_RSSI);
-void ESP32_voidSendUserID(const uint8* copy_userID);
+void ESP32_voidSendRSSIArray(sint8 copy_RSSI_Array[8]);/* for 8 RSSI values*/
+void ESP32_voidSendUserID( uint8* copy_userID);
 
 #endif	/* BLE_H */
