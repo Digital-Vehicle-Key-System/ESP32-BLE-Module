@@ -1,48 +1,42 @@
-//==================================================================================//
-//  PlatformIO Project: CAN Sender Example (Arduino on ESP32)
-//==================================================================================//
 
-#include <Arduino.h>
-#include <CAN.h>  
-#include "BLE_CAN.h"
-#include "BLE.h"
+/* 
+ * File:   BLE.ino
+ * Author: Nehal
+ *
+ * Created on December 2, 2024, 3:40 PM
+ */
 
+ #include <BLE.H>
+#include <CAN.h>
 
+ void setup() {
+     
+     Serial.begin(115200);   
+     while (!Serial);
+     delay(1000); 
 
-// Example data for transmission (for instance, an RSSI array)
-signed char rssi[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-
-void setup() {
-    Serial.begin(115200);
-    while (!Serial);   // Wait for Serial Monitor to open
-    delay(1000);
-
-    Serial.println("CAN Transmitter Example");
-
-    // Set the CAN pins
-    CAN.setPins(RX_GPIO_NUM, TX_GPIO_NUM);
-
-    // Start the CAN bus at 500 kbps
-    if (!CAN.begin(500E3)) {
-        Serial.println("Starting CAN failed!");
-        while (1); // Hang here if CAN initialization fails
-    } else {
-        Serial.println("CAN Initialized");
-    }
-
-      // Initialize the BLE server.
-      initBLEServer();
-
-
-}
-
-void loop() {
-    // Transmit an example packet every cycle
-   // canSender(0x08, (char *)rssi, 8);
+    /* Initialize CAN*/
+     canInit();
+	 /* Initialize BLE */
+     BLE_voidInit();
     
-    // Uncomment below if you want to also receive packets
-    // canReceiver();
-}
+     
+ }
+ 
+ 
+ void loop() {
+     /*  Restarts BLE scan periodically */ 
+    BLE_voidRestartScan();
+    /* Checks available memory and restarts the ESP32 if low */
+    ESP32_voidCheckMemory();
+    
 
+    // If no new advertisement for 2 seconds, reset rssiIndex.
+    if ((millis() - lastRSSIUpdate) > 2000 && rssiIndex != 0) {
+      rssiIndex = 0;
+      Serial.println("No update in 2 seconds, resetting RSSI index.");
+    }
+   
+ }
 
-
+ 

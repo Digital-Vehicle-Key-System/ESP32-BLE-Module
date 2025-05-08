@@ -1,9 +1,26 @@
 
+
+/* Section : Includes*/
+
 #include "BLE_CAN.h"
 
-//==============================================================================//
-//  CAN Sender
-//==============================================================================//
+void canInit(void){
+  Serial.println ("CAN Receiver/Receiver");
+
+  // Set the pins
+  CAN.setPins (RX_GPIO_NUM, TX_GPIO_NUM);
+
+  // start the CAN bus at 500 kbps
+  if (!CAN.begin (500E3)) {
+    Serial.println ("Starting CAN failed!");
+    while (1);
+  }
+  else {
+    Serial.println ("CAN Initialized");
+  }
+
+}
+
 void canSender(int id, char* message, int message_len) {
     Serial.print("Sending packet ... ");
 
@@ -17,49 +34,48 @@ void canSender(int id, char* message, int message_len) {
     CAN.endPacket();
 
     // Optionally, send an RTR (Remote Transmission Request) packet
-    CAN.beginPacket(id, 3, true); // '3' is the requested data length, true indicates RTR
-    CAN.endPacket();
+   /* CAN.beginPacket(id, 3, true); // '3' is the requested data length, true indicates RTR
+    CAN.endPacket();*/
 
     Serial.println("done");
 
     delay(100);
 }
 
-//==============================================================================//
-//  CAN Receiver
-//==============================================================================//
-void canReceiver() {
-    // Try to parse a received CAN packet
-    int packetSize = CAN.parsePacket();
+ void canReceiver() {
+  // try to parse packet
+  int packetSize = CAN.parsePacket();
 
-    if (packetSize) { // A packet was received
-        Serial.print("Received ");
+  if (packetSize) {
+    // received a packet
+    Serial.print ("Received ");
 
-        if (CAN.packetExtended()) {
-            Serial.print("extended ");
-        }
-
-        if (CAN.packetRtr()) {
-            Serial.print("RTR ");
-        }
-
-        Serial.print("packet with id 0x");
-        Serial.print(CAN.packetId(), HEX);
-
-        if (CAN.packetRtr()) {
-            Serial.print(" and requested length ");
-            Serial.println(CAN.packetDlc());
-        } else {
-            Serial.print(" and length ");
-            Serial.println(packetSize);
-
-            // Print packet data (only for non-RTR packets)
-            while (CAN.available()) {
-                Serial.print((char) CAN.read());
-            }
-            Serial.println();
-        }
-
-        Serial.println();
+    if (CAN.packetExtended()) {
+      Serial.print ("extended ");
     }
+
+    if (CAN.packetRtr()) {
+      // Remote transmission request, packet contains no data
+      Serial.print ("RTR ");
+    }
+
+    Serial.print ("packet with id 0x");
+    Serial.print (CAN.packetId(), HEX);
+
+    if (CAN.packetRtr()) {
+      Serial.print (" and requested length ");
+      Serial.println (CAN.packetDlc());
+    } else {
+      Serial.print (" and length ");
+      Serial.println (packetSize);
+
+      // only print packet data for non-RTR packets
+      while (CAN.available()) {
+        Serial.print ((char) CAN.read());
+      }
+      Serial.println();
+    }
+
+    Serial.println();
+  }
 }

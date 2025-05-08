@@ -1,17 +1,42 @@
-#ifndef BLE_H
-#define BLE_H
+/* 
+ * File:   BLE.h
+ * Author: Nehal
+ *
+ * Created on December 2, 2024, 3:40 PM
+ */
 
-#include <Arduino.h>
-#include <NimBLEDevice.h>
-#include "BLE_CAN.h"
-
-
-// Define your service and characteristic UUIDs.
-#define SERVICE_UUID         "12345678-1234-5678-1234-56789abcdef0"
-#define CHARACTERISTIC_UUID  "abcdef01-1234-5678-1234-56789abcdef0"
-
-void ESP32_voidSendUserID(int* copy_userID);
-void ESP32_voidSendRSSIArray(signed char copy_RSSI_Array[8]);
-
-void initBLEServer() ;
-#endif // BLE_H
+ #ifndef BLE_H
+ #define	BLE_H
+ 
+ /* Section : Includes*/
+ #include <STD_Types.h>
+ #include <BLEAdvertisedDevice.h>
+ #include <BLEDevice.h>
+ #include <BLE_config.h>
+ #include <BLEScan.h>
+ #include "BLE_CAN.h"
+ #include <string>
+ /* Section : Data Type Declarations */
+ 
+ extern unsigned long lastRSSIUpdate;
+ extern uint8_t rssiIndex ;
+ /* Section : Macro Declarations */
+ 
+ 
+ /* Section : Macro Function Declarations */
+ 
+ 
+ /* Section : Function Declarations */
+ 
+ void BLE_voidInit();
+ sint8 BLE_sint8GetRSSI(BLEAdvertisedDevice advertisedDevice);
+ bool BLE_boolCheckForServiceUUID(BLEAdvertisedDevice advertisedDevice);
+ const char* BLE_pconstuint8GetDeviceID(BLEAdvertisedDevice advertisedDevice);
+ void BLE_voidRestartScan() ;
+ void ESP32_voidCheckMemory();
+ /**CAN Communication**/
+ void ESP32_voidSendRSSIArray(signed char copy_RSSI_Array[8]);
+ 
+ void ESP32_voidSendDeviceID(const char* copy_userID);
+ #endif	/* BLE_H */
+ 
